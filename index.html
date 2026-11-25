@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contador de Pessoas - BeiQi-S10</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0; padding: 20px;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
+    }
+    .container { width: 100%; max-width: 440px; }
+    .card {
+      background: var(--card); border-radius: 16px;
+      padding: 24px; margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .status {
+      font-size: 0.85rem; color: var(--muted);
+      margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+    .dot.connected { background: var(--accent); }
+    .count {
+      font-size: 5rem; font-weight: 800; line-height: 1;
+      margin: 16px 0; color: var(--accent);
+    }
+    .raw-info { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    button {
+      border: none; border-radius: 10px; padding: 14px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:active { opacity: 0.8; }
+    .btn-primary { background: var(--accent); color: #052e16; grid-column: span 2; }
+    .btn-secondary { background: #334155; color: var(--text); }
+    .log-list {
+      max-height: 240px; overflow-y: auto; text-align: left;
+      font-size: 0.9rem; border-top: 1px solid #334155; padding-top: 10px;
+    }
+    .log-item {
+      display: flex; justify-content: space-between;
+      padding: 6px 4px; border-bottom: 1px solid #1e293b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="status">
+        <span id="statusDot" class="dot"></span>
+        <span id="statusText">Desconectado</span>
+      </div>
+
+      <div class="count" id="sessionCount">0</div>
+      <div class="raw-info">Leitura bruta do anel: <strong id="rawCount">--</strong></div>
+
+      <div class="btn-group">
+        <button id="btnConnect" class="btn-primary">Conectar BeiQi-S10</button>
+        <button id="btnReset" class="btn-secondary">Zerar Sessão</button>
+        <button id="btnExport" class="btn-secondary">Exportar CSV</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0; font-size:1rem; color:var(--muted);">Histórico de Entradas</h3>
+      <div id="logList" class="log-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const SERVICE_UUID = 0x1815; // Automation IO
+    const CHAR_UUID = 0x2a56;    // Digital
+    const STORAGE_KEY = 'beiqi_s10_session_v1';
+
+    let device = null;
+    let baseOffset = null;
+    let lastRawCount = null;
+    let logs = [];
+
+    const elStatusDot = document.getElementById('statusDot');
+    const elStatusText = document.getElementById('statusText');
+    const elSessionCount = document.getElementById('sessionCount');
+    const elRawCount = document.getElementById('rawCount');
+    const elLogList = document.getElementById('logList');
+
+    document.getElementById('btnConnect').addEventListener('click', connectBLE);
+    document.getElementById('btnReset').addEventListener('click', resetSession);
+    document.getElementById('btnExport').addEventListener('click', exportCSV);
+
+    loadSavedState();
+
+    async function connectBLE() {
+      try {
+        if (!navigator.bluetooth) {
+          alert('Web Bluetooth não suportado neste navegador. Use Chrome ou Edge em localhost ou HTTPS.');
+          return;
+        }
+
+        elStatusText.textContent = 'Aperte o botão do anel e selecione BeiQi-S10...';
+
+        // Lista todos os dispositivos BLE próximos (evita bloqueio por resolução de nome no Linux)
+        device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [SERVICE_UUID, 0xae00]
+        });
+
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+
+        elStatusText.textContent = 'Conectando ao serviço GATT...';
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(CHAR_UUID);
+
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', handleNotification);
+
+        elStatusDot.classList.add('connected');
+        elStatusText.textContent = `Conectado a ${device.name || device.id}`;
+      } catch (err) {
+        console.error(err);
+        elStatusDot.classList.remove('connected');
+        elStatusText.textContent = err.name === 'NotFoundError'
+          ? 'Seleção cancelada'
+          : `Erro: ${err.message}`;
+      }
+    }
+
+    function onDisconnected() {
+      elStatusDot.classList.remove('connected');
+      elStatusText.textContent = 'Desconectado (clique para reconectar)';
+    }
+
+    function handleNotification(event) {
+      const dataView = event.target.value;
+      const bytes = new Uint8Array(dataView.buffer);
+
+      // Valida tamanho mínimo e cabeçalho (0x06, 0x0C)
+      if (bytes.length < 15 || bytes[0] !== 0x06 || bytes[1] !== 0x0C) return;
+
+      // Valida checksum XOR dos bytes 0..13 contra o byte 14
+      let xor = 0;
+      for (let i = 0; i < 14; i++) {
+        xor ^= bytes[i];
+      }
+      if (xor !== bytes[14]) return;
+
+      // Extrai contador (bytes 2..4)
+      const currentRaw = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
+      elRawCount.textContent = currentRaw;
+
+      // Define a tara inicial no primeiro pacote recebido
+      if (baseOffset === null) {
+        baseOffset = currentRaw;
+      }
+
+      // Caso o usuário tenha zerado o anel fisicamente
+      if (currentRaw < baseOffset) {
+        baseOffset = currentRaw;
+      }
+
+      const sessionTotal = currentRaw - baseOffset;
+      elSessionCount.textContent = sessionTotal;
+
+      // Registra no histórico apenas quando houver incremento
+      if (lastRawCount !== null && currentRaw > lastRawCount) {
+        const diff = currentRaw - lastRawCount;
+        for (let i = 0; i < diff; i++) {
+          addLog(sessionTotal - diff + i + 1);
+        }
+      }
+
+      lastRawCount = currentRaw;
+      saveState();
+    }
+
+    function addLog(personNumber) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('pt-BR');
+      const isoStr = now.toISOString();
+
+      logs.unshift({ numero: personNumber, hora: timeStr, timestamp: isoStr });
+      renderLogItem(personNumber, timeStr, true);
+    }
+
+    function renderLogItem(personNumber, timeStr, prepend = false) {
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.innerHTML = `<span>Pessoa #${personNumber}</span><span>${timeStr}</span>`;
+      if (prepend) {
+        elLogList.prepend(item);
+      } else {
+        elLogList.appendChild(item);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        baseOffset,
+        lastRawCount,
+        logs
+      }));
+    }
+
+    function loadSavedState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        baseOffset = data.baseOffset ?? null;
+        lastRawCount = data.lastRawCount ?? null;
+        logs = Array.isArray(data.logs) ? data.logs : [];
+
+        if (lastRawCount !== null && baseOffset !== null) {
+          elRawCount.textContent = lastRawCount;
+          elSessionCount.textContent = Math.max(0, lastRawCount - baseOffset);
+        }
+        elLogList.innerHTML = '';
+        logs.forEach(l => renderLogItem(l.numero, l.hora, false));
+      } catch (e) {
+        console.warn('Falha ao restaurar sessão anterior:', e);
+      }
+    }
+
+    function resetSession() {
+      if (lastRawCount !== null) {
+        baseOffset = lastRawCount;
+      } else {
+        baseOffset = null;
+      }
+      logs = [];
+      elSessionCount.textContent = '0';
+      elLogList.innerHTML = '';
+      saveState();
+    }
+
+    function exportCSV() {
+      if (logs.length === 0) {
+        alert('Nenhum registro para exportar.');
+        return;
+      }
+      const header = 'Numero,Horario,Timestamp_ISO\n';
+      const rows = [...logs].reverse().map(l => `${l.numero},${l.hora},${l.timestamp}`).join('\n');
+      const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contagem-pessoas-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
