@@ -10,6 +10,7 @@
       --card: #1e293b;
       --accent: #22c55e;
       --danger: #ef4444;
+      --warn: #f59e0b;
       --text: #f8fafc;
       --muted: #94a3b8;
     }
@@ -41,20 +42,25 @@
     .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     button {
       border: none; border-radius: 10px; padding: 14px;
-      font-size: 1rem; font-weight: 600; cursor: pointer;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
       transition: opacity 0.2s;
     }
     button:active { opacity: 0.8; }
     .btn-primary { background: var(--accent); color: #052e16; grid-column: span 2; }
     .btn-secondary { background: #334155; color: var(--text); }
+    .btn-warn { background: #78350f; color: #fef3c7; grid-column: span 2; }
     .log-list {
-      max-height: 240px; overflow-y: auto; text-align: left;
+      max-height: 220px; overflow-y: auto; text-align: left;
       font-size: 0.9rem; border-top: 1px solid #334155; padding-top: 10px;
     }
     .log-item {
       display: flex; justify-content: space-between;
       padding: 6px 4px; border-bottom: 1px solid #1e293b;
     }
+    details { text-align: left; font-size: 0.85rem; color: var(--muted); }
+    summary { cursor: pointer; font-weight: 600; color: var(--text); }
+    .test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .btn-test { background: #0f172a; color: var(--text); border: 1px solid #334155; padding: 10px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -70,9 +76,26 @@
 
       <div class="btn-group">
         <button id="btnConnect" class="btn-primary">Conectar BeiQi-S10</button>
-        <button id="btnReset" class="btn-secondary">Zerar Sessão</button>
+        <button id="btnReset" class="btn-secondary">Zerar Sessão (App)</button>
         <button id="btnExport" class="btn-secondary">Exportar CSV</button>
+        <button id="btnResetRing" class="btn-warn">Zerar Contador do Anel</button>
       </div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>Descoberta de Comando (Testar Reset no Visor)</summary>
+        <p style="margin:8px 0;">Com o anel conectado, clique nos botões abaixo e observe qual deles zera o número na tela do anel:</p>
+        <div class="test-grid">
+          <button class="btn-test" onclick="sendRingCommand(0x06)">CMD 0x06 (Zero)</button>
+          <button class="btn-test" onclick="sendRingCommand(0x07)">CMD 0x07</button>
+          <button class="btn-test" onclick="sendRingCommand(0x08)">CMD 0x08</button>
+          <button class="btn-test" onclick="sendRingCommand(0x09)">CMD 0x09</button>
+          <button class="btn-test" onclick="sendRingCommand(0x0A)">CMD 0x0A</button>
+          <button class="btn-test" onclick="sendRingCommand(0x04)">CMD 0x04</button>
+        </div>
+        <div id="cmdFeedback" style="margin-top:10px; font-size:0.8rem; color:#38bdf8;"></div>
+      </details>
     </div>
 
     <div class="card">
@@ -87,6 +110,7 @@
     const STORAGE_KEY = 'beiqi_s10_session_v1';
 
     let device = null;
+    let digitalChar = null;
     let baseOffset = null;
     let lastRawCount = null;
     let logs = [];
@@ -96,23 +120,24 @@
     const elSessionCount = document.getElementById('sessionCount');
     const elRawCount = document.getElementById('rawCount');
     const elLogList = document.getElementById('logList');
+    const elCmdFeedback = document.getElementById('cmdFeedback');
 
     document.getElementById('btnConnect').addEventListener('click', connectBLE);
     document.getElementById('btnReset').addEventListener('click', resetSession);
     document.getElementById('btnExport').addEventListener('click', exportCSV);
+    document.getElementById('btnResetRing').addEventListener('click', () => sendRingCommand(0x06));
 
     loadSavedState();
 
     async function connectBLE() {
       try {
         if (!navigator.bluetooth) {
-          alert('Web Bluetooth não suportado neste navegador. Use Chrome ou Edge em localhost ou HTTPS.');
+          alert('Web Bluetooth não suportado neste navegador.');
           return;
         }
 
         elStatusText.textContent = 'Aperte o botão do anel e selecione BeiQi-S10...';
 
-        // Lista todos os dispositivos BLE próximos (evita bloqueio por resolução de nome no Linux)
         device = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: [SERVICE_UUID, 0xae00]
@@ -123,10 +148,10 @@
         elStatusText.textContent = 'Conectando ao serviço GATT...';
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService(SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(CHAR_UUID);
+        digitalChar = await service.getCharacteristic(CHAR_UUID);
 
-        await characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', handleNotification);
+        await digitalChar.startNotifications();
+        digitalChar.addEventListener('characteristicvaluechanged', handleNotification);
 
         elStatusDot.classList.add('connected');
         elStatusText.textContent = `Conectado a ${device.name || device.id}`;
@@ -140,34 +165,71 @@
     }
 
     function onDisconnected() {
+      digitalChar = null;
       elStatusDot.classList.remove('connected');
       elStatusText.textContent = 'Desconectado (clique para reconectar)';
+    }
+
+    // Monta um pacote de 16 bytes no padrão do BeiQi-S10 com checksum XOR automático
+    function buildPacket(cmd, payload = []) {
+      const frame = new Uint8Array(16);
+      frame[0] = cmd;
+      frame[1] = 0x0C; // 12 bytes de payload
+      for (let i = 0; i < Math.min(payload.length, 12); i++) {
+        frame[2 + i] = payload[i];
+      }
+      let xor = 0;
+      for (let i = 0; i < 14; i++) {
+        xor ^= frame[i];
+      }
+      frame[14] = xor;
+      frame[15] = 0xFE;
+      return frame;
+    }
+
+    async function sendRingCommand(cmdByte) {
+      if (!digitalChar) {
+        alert('Conecte o BeiQi-S10 primeiro.');
+        return;
+      }
+      try {
+        const packet = buildPacket(cmdByte);
+        const hexStr = Array.from(packet).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('-');
+        await digitalChar.writeValue(packet);
+        elCmdFeedback.textContent = `Enviado: ${hexStr}`;
+      } catch (err) {
+        console.error(err);
+        elCmdFeedback.textContent = `Falha ao enviar: ${err.message}`;
+      }
     }
 
     function handleNotification(event) {
       const dataView = event.target.value;
       const bytes = new Uint8Array(dataView.buffer);
 
-      // Valida tamanho mínimo e cabeçalho (0x06, 0x0C)
-      if (bytes.length < 15 || bytes[0] !== 0x06 || bytes[1] !== 0x0C) return;
+      // Mostra no rodapé de debug caso o anel responda com outro comando além de 0x06
+      if (bytes[0] !== 0x06) {
+        const hexResp = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('-');
+        elCmdFeedback.textContent = `Resposta do anel: ${hexResp}`;
+        return;
+      }
 
-      // Valida checksum XOR dos bytes 0..13 contra o byte 14
+      if (bytes.length < 15 || bytes[1] !== 0x0C) return;
+
       let xor = 0;
       for (let i = 0; i < 14; i++) {
         xor ^= bytes[i];
       }
       if (xor !== bytes[14]) return;
 
-      // Extrai contador (bytes 2..4)
       const currentRaw = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
       elRawCount.textContent = currentRaw;
 
-      // Define a tara inicial no primeiro pacote recebido
       if (baseOffset === null) {
         baseOffset = currentRaw;
       }
 
-      // Caso o usuário tenha zerado o anel fisicamente
+      // Se o anel foi zerado fisicamente ou via comando, ajusta a tara automaticamente
       if (currentRaw < baseOffset) {
         baseOffset = currentRaw;
       }
@@ -175,7 +237,6 @@
       const sessionTotal = currentRaw - baseOffset;
       elSessionCount.textContent = sessionTotal;
 
-      // Registra no histórico apenas quando houver incremento
       if (lastRawCount !== null && currentRaw > lastRawCount) {
         const diff = currentRaw - lastRawCount;
         for (let i = 0; i < diff; i++) {
