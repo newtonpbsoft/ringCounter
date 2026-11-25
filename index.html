@@ -11,12 +11,10 @@
       --card-inner: rgba(15, 23, 42, 0.6);
       --text: #f8fafc;
       --muted: #94a3b8;
-      --primary: #22c55e;
-      --primary-hover: #16a34a;
-      --blue: #3b82f6;
-      --blue-hover: #2563eb;
-      --danger: #ef4444;
-      --danger-hover: #dc2626;
+      --green: #22c55e;
+      --green-hover: #16a34a;
+      --red: #ef4444;
+      --red-hover: #dc2626;
       --secondary: #334155;
     }
 
@@ -58,7 +56,7 @@
     .summary-total {
       font-size: 2.5rem;
       font-weight: 800;
-      color: var(--primary);
+      color: var(--text);
     }
 
     .rings-grid {
@@ -79,8 +77,8 @@
       font-size: 0.75rem;
       padding: 4px 10px;
       border-radius: 999px;
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
+      background: rgba(148, 163, 184, 0.15);
+      color: var(--muted);
       font-weight: 600;
     }
     .badge.connected {
@@ -102,39 +100,36 @@
       line-height: 1.1;
       margin: 4px 0;
     }
-    .ring-1 .counter-value { color: var(--primary); }
-    .ring-2 .counter-value { color: var(--blue); }
+    .ring-1 .counter-value { color: var(--green); }
+    .ring-2 .counter-value { color: var(--red); }
 
     .ring-raw { font-size: 0.8rem; color: var(--muted); }
 
-    .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
     button {
+      width: 100%;
       border: none;
       border-radius: 10px;
-      padding: 11px 14px;
-      font-size: 0.9rem;
+      padding: 12px 16px;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
       color: white;
       transition: background 0.15s ease;
     }
 
-    .btn-connect-1 { grid-column: span 2; background: var(--primary); }
-    .btn-connect-1:hover { background: var(--primary-hover); }
+    .btn-connect-1 { background: var(--green); }
+    .btn-connect-1:hover { background: var(--green-hover); }
 
-    .btn-connect-2 { grid-column: span 2; background: var(--blue); }
-    .btn-connect-2:hover { background: var(--blue-hover); }
+    .btn-connect-2 { background: var(--red); }
+    .btn-connect-2:hover { background: var(--red-hover); }
 
-    .btn-secondary { background: var(--secondary); }
+    .btn-secondary {
+      width: auto;
+      background: var(--secondary);
+      padding: 10px 14px;
+      font-size: 0.88rem;
+    }
     .btn-secondary:hover { background: #475569; }
-
-    .btn-danger { background: var(--danger); }
-    .btn-danger:hover { background: var(--danger-hover); }
 
     .history-header {
       display: flex;
@@ -180,7 +175,7 @@
 
     <!-- Painéis dos 2 Anéis -->
     <div class="rings-grid">
-      <!-- ANEL 1 -->
+      <!-- ANEL 1 (VERDE) -->
       <div class="ring-card ring-1">
         <div class="ring-header">
           <h2 class="ring-title">Anel 1</h2>
@@ -191,14 +186,10 @@
           <div id="count-1" class="counter-value">0</div>
           <div id="raw-1" class="ring-raw">Leitura bruta do anel: —</div>
         </div>
-        <div class="actions">
-          <button id="connect-1" class="btn-connect-1">Conectar Anel 1</button>
-          <button id="manual-1" class="btn-secondary">+1 Manual</button>
-          <button id="reset-1" class="btn-danger">Zerar Anel 1</button>
-        </div>
+        <button id="connect-1" class="btn-connect-1">Conectar Anel 1</button>
       </div>
 
-      <!-- ANEL 2 -->
+      <!-- ANEL 2 (VERMELHO) -->
       <div class="ring-card ring-2">
         <div class="ring-header">
           <h2 class="ring-title">Anel 2</h2>
@@ -209,11 +200,7 @@
           <div id="count-2" class="counter-value">0</div>
           <div id="raw-2" class="ring-raw">Leitura bruta do anel: —</div>
         </div>
-        <div class="actions">
-          <button id="connect-2" class="btn-connect-2">Conectar Anel 2</button>
-          <button id="manual-2" class="btn-secondary">+1 Manual</button>
-          <button id="reset-2" class="btn-danger">Zerar Anel 2</button>
-        </div>
+        <button id="connect-2" class="btn-connect-2">Conectar Anel 2</button>
       </div>
     </div>
 
@@ -233,7 +220,6 @@
     const SERVICE_UUID = 0x1815; // Automation IO
     const CHAR_UUID = 0x2A56;    // Digital
 
-    // Estado isolado para cada anel
     const aneis = {
       1: { device: null, sessao: 0, ultimoValorBruto: null },
       2: { device: null, sessao: 0, ultimoValorBruto: null }
@@ -278,7 +264,7 @@
       const estado = aneis[slot];
       document.getElementById(`raw-${slot}`).textContent = `Leitura bruta do anel: ${novoValor}`;
 
-      // Primeira leitura ao conectar: sincroniza base sem somar o acumulado antigo
+      // Primeira leitura ao conectar: sincroniza a base atual do visor físico
       if (estado.ultimoValorBruto === null) {
         estado.ultimoValorBruto = novoValor;
         registrarEvento(`Anel ${slot}`, `Sincronizado (visor físico em ${novoValor})`, false);
@@ -291,7 +277,10 @@
         atualizarInterface();
         registrarEvento(`Anel ${slot}`, `+${incremento} (Subtotal: ${estado.sessao})`, true);
       } else if (novoValor === 0 && estado.ultimoValorBruto > 0) {
-        registrarEvento(`Anel ${slot}`, 'Visor físico zerado (contagem do app mantida)', false);
+        // Quando o botão físico de reset do anel é pressionado, zera também a sessão dele
+        estado.sessao = 0;
+        atualizarInterface();
+        registrarEvento(`Anel ${slot}`, 'Zerado pelo anel físico', false);
       }
 
       estado.ultimoValorBruto = novoValor;
@@ -322,10 +311,9 @@
           optionalServices: [SERVICE_UUID]
         });
 
-        // Evita selecionar o mesmo anel físico nos dois slots
         if (aneis[outroSlot].device && aneis[outroSlot].device.id === device.id) {
           alert(`Este anel já está conectado no Anel ${outroSlot}. Selecione o outro dispositivo.`);
-          statusEl.textContent = aneis[slot].device ? 'Conectado' : 'Desconectado';
+          statusEl.textContent = aneis[slot].device?.gatt?.connected ? 'Conectado' : 'Desconectado';
           return;
         }
 
@@ -354,31 +342,16 @@
       }
     }
 
-    // Eventos dos botões de conexão, manual e reset para cada slot
     [1, 2].forEach((slot) => {
       document.getElementById(`connect-${slot}`).addEventListener('click', () => conectarAnel(slot));
-
-      document.getElementById(`manual-${slot}`).addEventListener('click', () => {
-        aneis[slot].sessao += 1;
-        atualizarInterface();
-        registrarEvento(`Anel ${slot}`, `+1 manual (Subtotal: ${aneis[slot].sessao})`, true);
-      });
-
-      document.getElementById(`reset-${slot}`).addEventListener('click', () => {
-        aneis[slot].sessao = 0;
-        atualizarInterface();
-        registrarEvento(`Anel ${slot}`, 'Contador da sessão zerado', false);
-      });
     });
 
-    // Limpar histórico visual e CSV
     document.getElementById('btnClearHistory').addEventListener('click', () => {
       historico.length = 0;
       document.getElementById('logBox').innerHTML =
         '<div style="text-align: center; padding: 12px 0;">Histórico limpo.</div>';
     });
 
-    // Exportar CSV
     document.getElementById('btnExportCsv').addEventListener('click', () => {
       if (historico.length === 0) {
         alert('Ainda não há registros de contagem para exportar.');
