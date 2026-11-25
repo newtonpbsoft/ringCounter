@@ -8,322 +8,250 @@
     :root {
       --bg: #0f172a;
       --card: #1e293b;
-      --accent: #22c55e;
-      --danger: #ef4444;
-      --warn: #f59e0b;
       --text: #f8fafc;
       --muted: #94a3b8;
+      --primary: #22c55e;
+      --primary-hover: #16a34a;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --secondary: #334155;
     }
+
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     body {
-      margin: 0; padding: 20px;
-      background: var(--bg); color: var(--text);
-      display: flex; flex-direction: column; align-items: center;
+      margin: 0;
       min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
     }
-    .container { width: 100%; max-width: 440px; }
-    .card {
-      background: var(--card); border-radius: 16px;
-      padding: 24px; margin-bottom: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
       text-align: center;
     }
+
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
     .status {
-      font-size: 0.85rem; color: var(--muted);
-      margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-bottom: 24px;
     }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
-    .dot.connected { background: var(--accent); }
-    .count {
-      font-size: 5rem; font-weight: 800; line-height: 1;
-      margin: 16px 0; color: var(--accent);
+    .status.connected { color: var(--primary); font-weight: 600; }
+
+    .counter-box {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      padding: 24px 16px;
+      margin-bottom: 20px;
     }
-    .raw-info { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
-    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .counter-label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .counter-value {
+      font-size: 4.5rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin: 8px 0;
+      color: var(--primary);
+    }
+
+    .ring-raw {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     button {
-      border: none; border-radius: 10px; padding: 14px;
-      font-size: 0.95rem; font-weight: 600; cursor: pointer;
-      transition: opacity 0.2s;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      transition: background 0.15s ease;
     }
-    button:active { opacity: 0.8; }
-    .btn-primary { background: var(--accent); color: #052e16; grid-column: span 2; }
-    .btn-secondary { background: #334155; color: var(--text); }
-    .btn-warn { background: #78350f; color: #fef3c7; grid-column: span 2; }
-    .log-list {
-      max-height: 220px; overflow-y: auto; text-align: left;
-      font-size: 0.9rem; border-top: 1px solid #334155; padding-top: 10px;
+
+    .btn-connect {
+      grid-column: span 2;
+      background: var(--primary);
     }
-    .log-item {
-      display: flex; justify-content: space-between;
-      padding: 6px 4px; border-bottom: 1px solid #1e293b;
+    .btn-connect:hover { background: var(--primary-hover); }
+
+    .btn-reset { background: var(--danger); }
+    .btn-reset:hover { background: var(--danger-hover); }
+
+    .btn-manual { background: var(--secondary); }
+    .btn-manual:hover { background: #475569; }
+
+    .log-box {
+      margin-top: 20px;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.45);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
     }
-    details { text-align: left; font-size: 0.85rem; color: var(--muted); }
-    summary { cursor: pointer; font-weight: 600; color: var(--text); }
-    .test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-    .btn-test { background: #0f172a; color: var(--text); border: 1px solid #334155; padding: 10px; font-size: 0.85rem; }
+    .log-box div { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="card">
-      <div class="status">
-        <span id="statusDot" class="dot"></span>
-        <span id="statusText">Desconectado</span>
-      </div>
+    <h1>Contagem de Pessoas</h1>
+    <div id="status" class="status">Desconectado do BeiQi-S10</div>
 
-      <div class="count" id="sessionCount">0</div>
-      <div class="raw-info">Leitura bruta do anel: <strong id="rawCount">--</strong></div>
-
-      <div class="btn-group">
-        <button id="btnConnect" class="btn-primary">Conectar BeiQi-S10</button>
-        <button id="btnReset" class="btn-secondary">Zerar Sessão (App)</button>
-        <button id="btnExport" class="btn-secondary">Exportar CSV</button>
-        <button id="btnResetRing" class="btn-warn">Zerar Contador do Anel</button>
-      </div>
+    <div class="counter-box">
+      <div class="counter-label">Total na Sessão</div>
+      <div id="displayCount" class="counter-value">0</div>
+      <div id="ringRaw" class="ring-raw">Visor do anel: —</div>
     </div>
 
-    <div class="card">
-      <details>
-        <summary>Descoberta de Comando (Testar Reset no Visor)</summary>
-        <p style="margin:8px 0;">Com o anel conectado, clique nos botões abaixo e observe qual deles zera o número na tela do anel:</p>
-        <div class="test-grid">
-          <button class="btn-test" onclick="sendRingCommand(0x06)">CMD 0x06 (Zero)</button>
-          <button class="btn-test" onclick="sendRingCommand(0x07)">CMD 0x07</button>
-          <button class="btn-test" onclick="sendRingCommand(0x08)">CMD 0x08</button>
-          <button class="btn-test" onclick="sendRingCommand(0x09)">CMD 0x09</button>
-          <button class="btn-test" onclick="sendRingCommand(0x0A)">CMD 0x0A</button>
-          <button class="btn-test" onclick="sendRingCommand(0x04)">CMD 0x04</button>
-        </div>
-        <div id="cmdFeedback" style="margin-top:10px; font-size:0.8rem; color:#38bdf8;"></div>
-      </details>
+    <div class="actions">
+      <button id="btnConnect" class="btn-connect">Conectar BeiQi-S10</button>
+      <button id="btnManual" class="btn-manual">+1 Manual</button>
+      <button id="btnReset" class="btn-reset">Zerar Contador</button>
     </div>
 
-    <div class="card">
-      <h3 style="margin-top:0; font-size:1rem; color:var(--muted);">Histórico de Entradas</h3>
-      <div id="logList" class="log-list"></div>
+    <div id="logBox" class="log-box">
+      <div>Aguardando conexão Bluetooth...</div>
     </div>
   </div>
 
   <script>
     const SERVICE_UUID = 0x1815; // Automation IO
-    const CHAR_UUID = 0x2a56;    // Digital
-    const STORAGE_KEY = 'beiqi_s10_session_v1';
+    const CHAR_UUID = 0x2A56;    // Digital
 
-    let device = null;
-    let digitalChar = null;
-    let baseOffset = null;
-    let lastRawCount = null;
-    let logs = [];
+    let totalPessoas = 0;
+    let ultimoValorAnel = null;
+    let bluetoothDevice = null;
 
-    const elStatusDot = document.getElementById('statusDot');
-    const elStatusText = document.getElementById('statusText');
-    const elSessionCount = document.getElementById('sessionCount');
-    const elRawCount = document.getElementById('rawCount');
-    const elLogList = document.getElementById('logList');
-    const elCmdFeedback = document.getElementById('cmdFeedback');
+    const displayCount = document.getElementById('displayCount');
+    const ringRaw = document.getElementById('ringRaw');
+    const statusEl = document.getElementById('status');
+    const logBox = document.getElementById('logBox');
 
-    document.getElementById('btnConnect').addEventListener('click', connectBLE);
-    document.getElementById('btnReset').addEventListener('click', resetSession);
-    document.getElementById('btnExport').addEventListener('click', exportCSV);
-    document.getElementById('btnResetRing').addEventListener('click', () => sendRingCommand(0x06));
-
-    loadSavedState();
-
-    async function connectBLE() {
-      try {
-        if (!navigator.bluetooth) {
-          alert('Web Bluetooth não suportado neste navegador.');
-          return;
-        }
-
-        elStatusText.textContent = 'Aperte o botão do anel e selecione BeiQi-S10...';
-
-        device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [SERVICE_UUID, 0xae00]
-        });
-
-        device.addEventListener('gattserverdisconnected', onDisconnected);
-
-        elStatusText.textContent = 'Conectando ao serviço GATT...';
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(SERVICE_UUID);
-        digitalChar = await service.getCharacteristic(CHAR_UUID);
-
-        await digitalChar.startNotifications();
-        digitalChar.addEventListener('characteristicvaluechanged', handleNotification);
-
-        elStatusDot.classList.add('connected');
-        elStatusText.textContent = `Conectado a ${device.name || device.id}`;
-      } catch (err) {
-        console.error(err);
-        elStatusDot.classList.remove('connected');
-        elStatusText.textContent = err.name === 'NotFoundError'
-          ? 'Seleção cancelada'
-          : `Erro: ${err.message}`;
-      }
+    function addLog(msg) {
+      const hora = new Date().toLocaleTimeString('pt-BR');
+      const item = document.createElement('div');
+      item.textContent = `[${hora}] ${msg}`;
+      logBox.prepend(item);
     }
 
-    function onDisconnected() {
-      digitalChar = null;
-      elStatusDot.classList.remove('connected');
-      elStatusText.textContent = 'Desconectado (clique para reconectar)';
+    function atualizarTela() {
+      displayCount.textContent = totalPessoas;
     }
 
-    // Monta um pacote de 16 bytes no padrão do BeiQi-S10 com checksum XOR automático
-    function buildPacket(cmd, payload = []) {
-      const frame = new Uint8Array(16);
-      frame[0] = cmd;
-      frame[1] = 0x0C; // 12 bytes de payload
-      for (let i = 0; i < Math.min(payload.length, 12); i++) {
-        frame[2 + i] = payload[i];
-      }
-      let xor = 0;
-      for (let i = 0; i < 14; i++) {
-        xor ^= frame[i];
-      }
-      frame[14] = xor;
-      frame[15] = 0xFE;
-      return frame;
-    }
+    function processarLeituraAnel(novoValor) {
+      ringRaw.textContent = `Visor do anel: ${novoValor}`;
 
-    async function sendRingCommand(cmdByte) {
-      if (!digitalChar) {
-        alert('Conecte o BeiQi-S10 primeiro.');
-        return;
-      }
-      try {
-        const packet = buildPacket(cmdByte);
-        const hexStr = Array.from(packet).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('-');
-        await digitalChar.writeValue(packet);
-        elCmdFeedback.textContent = `Enviado: ${hexStr}`;
-      } catch (err) {
-        console.error(err);
-        elCmdFeedback.textContent = `Falha ao enviar: ${err.message}`;
-      }
-    }
-
-    function handleNotification(event) {
-      const dataView = event.target.value;
-      const bytes = new Uint8Array(dataView.buffer);
-
-      // Mostra no rodapé de debug caso o anel responda com outro comando além de 0x06
-      if (bytes[0] !== 0x06) {
-        const hexResp = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('-');
-        elCmdFeedback.textContent = `Resposta do anel: ${hexResp}`;
+      // Primeira leitura após conectar: apenas sincroniza a referência
+      if (ultimoValorAnel === null) {
+        ultimoValorAnel = novoValor;
+        addLog(`Sincronizado com o anel (valor atual: ${novoValor})`);
         return;
       }
 
-      if (bytes.length < 15 || bytes[1] !== 0x0C) return;
+      if (novoValor > ultimoValorAnel) {
+        const incremento = novoValor - ultimoValorAnel;
+        totalPessoas += incremento;
+        atualizarTela();
+        addLog(`+${incremento} pessoa(s) | Total: ${totalPessoas}`);
+      } else if (novoValor === 0 && ultimoValorAnel > 0) {
+        // O botão físico de reset do anel foi acionado
+        addLog('Anel zerado fisicamente (total da página mantido)');
+      }
 
+      ultimoValorAnel = novoValor;
+    }
+
+    function handleCharacteristicChanged(event) {
+      const value = event.target.value;
+      const bytes = new Uint8Array(value.buffer);
+
+      // Valida cabeçalho (0x06, 0x0C) e tamanho mínimo do pacote
+      if (bytes.length < 15 || bytes[0] !== 0x06 || bytes[1] !== 0x0C) return;
+
+      // Valida checksum XOR dos bytes 0..13 contra o byte 14
       let xor = 0;
       for (let i = 0; i < 14; i++) {
         xor ^= bytes[i];
       }
       if (xor !== bytes[14]) return;
 
-      const currentRaw = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
-      elRawCount.textContent = currentRaw;
-
-      if (baseOffset === null) {
-        baseOffset = currentRaw;
-      }
-
-      // Se o anel foi zerado fisicamente ou via comando, ajusta a tara automaticamente
-      if (currentRaw < baseOffset) {
-        baseOffset = currentRaw;
-      }
-
-      const sessionTotal = currentRaw - baseOffset;
-      elSessionCount.textContent = sessionTotal;
-
-      if (lastRawCount !== null && currentRaw > lastRawCount) {
-        const diff = currentRaw - lastRawCount;
-        for (let i = 0; i < diff; i++) {
-          addLog(sessionTotal - diff + i + 1);
-        }
-      }
-
-      lastRawCount = currentRaw;
-      saveState();
+      const contadorAtual = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
+      processarLeituraAnel(contadorAtual);
     }
 
-    function addLog(personNumber) {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('pt-BR');
-      const isoStr = now.toISOString();
-
-      logs.unshift({ numero: personNumber, hora: timeStr, timestamp: isoStr });
-      renderLogItem(personNumber, timeStr, true);
-    }
-
-    function renderLogItem(personNumber, timeStr, prepend = false) {
-      const item = document.createElement('div');
-      item.className = 'log-item';
-      item.innerHTML = `<span>Pessoa #${personNumber}</span><span>${timeStr}</span>`;
-      if (prepend) {
-        elLogList.prepend(item);
-      } else {
-        elLogList.appendChild(item);
-      }
-    }
-
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        baseOffset,
-        lastRawCount,
-        logs
-      }));
-    }
-
-    function loadSavedState() {
+    document.getElementById('btnConnect').addEventListener('click', async () => {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        baseOffset = data.baseOffset ?? null;
-        lastRawCount = data.lastRawCount ?? null;
-        logs = Array.isArray(data.logs) ? data.logs : [];
+        statusEl.textContent = 'Procurando BeiQi-S10...';
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: 'BeiQi' }],
+          optionalServices: [SERVICE_UUID]
+        });
 
-        if (lastRawCount !== null && baseOffset !== null) {
-          elRawCount.textContent = lastRawCount;
-          elSessionCount.textContent = Math.max(0, lastRawCount - baseOffset);
-        }
-        elLogList.innerHTML = '';
-        logs.forEach(l => renderLogItem(l.numero, l.hora, false));
-      } catch (e) {
-        console.warn('Falha ao restaurar sessão anterior:', e);
+        bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+          statusEl.textContent = 'Desconectado';
+          statusEl.classList.remove('connected');
+          ultimoValorAnel = null;
+          addLog('Dispositivo desconectado.');
+        });
+
+        const server = await bluetoothDevice.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(CHAR_UUID);
+
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChanged);
+
+        statusEl.textContent = `Conectado: ${bluetoothDevice.name}`;
+        statusEl.classList.add('connected');
+        addLog('Conectado e escutando cliques.');
+      } catch (err) {
+        statusEl.textContent = 'Falha ou cancelado';
+        addLog(`Erro: ${err.message}`);
       }
-    }
+    });
 
-    function resetSession() {
-      if (lastRawCount !== null) {
-        baseOffset = lastRawCount;
-      } else {
-        baseOffset = null;
+    // Botão para zerar a contagem da sessão na página
+    document.getElementById('btnReset').addEventListener('click', () => {
+      if (totalPessoas === 0) return;
+      if (confirm('Deseja zerar o contador da sessão atual?')) {
+        totalPessoas = 0;
+        atualizarTela();
+        logBox.innerHTML = '';
+        addLog('Contador zerado na página.');
       }
-      logs = [];
-      elSessionCount.textContent = '0';
-      elLogList.innerHTML = '';
-      saveState();
-    }
+    });
 
-    function exportCSV() {
-      if (logs.length === 0) {
-        alert('Nenhum registro para exportar.');
-        return;
-      }
-      const header = 'Numero,Horario,Timestamp_ISO\n';
-      const rows = [...logs].reverse().map(l => `${l.numero},${l.hora},${l.timestamp}`).join('\n');
-      const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contagem-pessoas-${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    // Botão auxiliar para ajuste manual (+1) caso necessário
+    document.getElementById('btnManual').addEventListener('click', () => {
+      totalPessoas += 1;
+      atualizarTela();
+      addLog(`+1 manual | Total: ${totalPessoas}`);
+    });
   </script>
 </body>
 </html>
