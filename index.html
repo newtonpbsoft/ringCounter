@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contador de Pessoas - BeiQi-S10</title>
+  <title>Contador de Pessoas (2 Anéis) - BeiQi-S10</title>
   <style>
     :root {
       --bg: #0f172a;
       --card: #1e293b;
+      --card-inner: rgba(15, 23, 42, 0.6);
       --text: #f8fafc;
       --muted: #94a3b8;
       --primary: #22c55e;
       --primary-hover: #16a34a;
+      --blue: #3b82f6;
+      --blue-hover: #2563eb;
       --danger: #ef4444;
       --danger-hover: #dc2626;
       --secondary: #334155;
@@ -25,117 +28,204 @@
       color: var(--text);
       display: flex;
       justify-content: center;
-      align-items: center;
-      padding: 16px;
+      padding: 20px 16px;
     }
 
-    .container {
+    .wrapper {
       width: 100%;
-      max-width: 420px;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .summary-card, .ring-card, .history-card {
       background: var(--card);
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-      text-align: center;
     }
 
-    h1 { font-size: 1.25rem; margin: 0 0 8px; }
-    .status {
-      font-size: 0.875rem;
-      color: var(--muted);
-      margin-bottom: 24px;
-    }
-    .status.connected { color: var(--primary); font-weight: 600; }
-
-    .counter-box {
-      background: rgba(15, 23, 42, 0.6);
-      border-radius: 12px;
-      padding: 24px 16px;
-      margin-bottom: 20px;
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
-    .counter-label {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-
-    .counter-value {
-      font-size: 4.5rem;
+    .summary-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
+    .summary-total {
+      font-size: 2.5rem;
       font-weight: 800;
-      line-height: 1.1;
-      margin: 8px 0;
       color: var(--primary);
     }
 
-    .ring-raw {
-      font-size: 0.8rem;
-      color: var(--muted);
+    .rings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
     }
+
+    .ring-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .ring-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      font-weight: 600;
+    }
+    .badge.connected {
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+    }
+
+    .counter-box {
+      background: var(--card-inner);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .counter-value {
+      font-size: 4rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin: 4px 0;
+    }
+    .ring-1 .counter-value { color: var(--primary); }
+    .ring-2 .counter-value { color: var(--blue); }
+
+    .ring-raw { font-size: 0.8rem; color: var(--muted); }
 
     .actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
 
     button {
       border: none;
       border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 0.95rem;
+      padding: 11px 14px;
+      font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
       color: white;
       transition: background 0.15s ease;
     }
 
-    .btn-connect {
-      grid-column: span 2;
-      background: var(--primary);
+    .btn-connect-1 { grid-column: span 2; background: var(--primary); }
+    .btn-connect-1:hover { background: var(--primary-hover); }
+
+    .btn-connect-2 { grid-column: span 2; background: var(--blue); }
+    .btn-connect-2:hover { background: var(--blue-hover); }
+
+    .btn-secondary { background: var(--secondary); }
+    .btn-secondary:hover { background: #475569; }
+
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: var(--danger-hover); }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
-    .btn-connect:hover { background: var(--primary-hover); }
-
-    .btn-reset { background: var(--danger); }
-    .btn-reset:hover { background: var(--danger-hover); }
-
-    .btn-manual { background: var(--secondary); }
-    .btn-manual:hover { background: #475569; }
 
     .log-box {
-      margin-top: 20px;
-      text-align: left;
-      max-height: 150px;
+      max-height: 200px;
       overflow-y: auto;
-      background: rgba(15, 23, 42, 0.45);
+      background: var(--card-inner);
       border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 0.82rem;
+      padding: 10px 14px;
+      font-size: 0.85rem;
       color: var(--muted);
     }
-    .log-box div { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .log-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Contagem de Pessoas</h1>
-    <div id="status" class="status">Desconectado do BeiQi-S10</div>
-
-    <div class="counter-box">
-      <div class="counter-label">Total na Sessão</div>
-      <div id="displayCount" class="counter-value">0</div>
-      <div id="ringRaw" class="ring-raw">Visor do anel: —</div>
+  <div class="wrapper">
+    <!-- Resumo Geral -->
+    <div class="summary-card">
+      <div class="summary-header">
+        <div>
+          <h1 class="summary-title">Total Geral (Anel 1 + Anel 2)</h1>
+          <div style="font-size: 0.82rem; color: var(--muted);">Contagem consolidada da sessão</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div id="totalGeral" class="summary-total">0</div>
+          <button id="btnExportCsv" class="btn-secondary">Exportar CSV</button>
+        </div>
+      </div>
     </div>
 
-    <div class="actions">
-      <button id="btnConnect" class="btn-connect">Conectar BeiQi-S10</button>
-      <button id="btnManual" class="btn-manual">+1 Manual</button>
-      <button id="btnReset" class="btn-reset">Zerar Contador</button>
+    <!-- Painéis dos 2 Anéis -->
+    <div class="rings-grid">
+      <!-- ANEL 1 -->
+      <div class="ring-card ring-1">
+        <div class="ring-header">
+          <h2 class="ring-title">Anel 1</h2>
+          <span id="status-1" class="badge">Desconectado</span>
+        </div>
+        <div class="counter-box">
+          <div style="font-size: 0.78rem; color: var(--muted); text-transform: uppercase;">Sessão Anel 1</div>
+          <div id="count-1" class="counter-value">0</div>
+          <div id="raw-1" class="ring-raw">Leitura bruta do anel: —</div>
+        </div>
+        <div class="actions">
+          <button id="connect-1" class="btn-connect-1">Conectar Anel 1</button>
+          <button id="manual-1" class="btn-secondary">+1 Manual</button>
+          <button id="reset-1" class="btn-danger">Zerar Anel 1</button>
+        </div>
+      </div>
+
+      <!-- ANEL 2 -->
+      <div class="ring-card ring-2">
+        <div class="ring-header">
+          <h2 class="ring-title">Anel 2</h2>
+          <span id="status-2" class="badge">Desconectado</span>
+        </div>
+        <div class="counter-box">
+          <div style="font-size: 0.78rem; color: var(--muted); text-transform: uppercase;">Sessão Anel 2</div>
+          <div id="count-2" class="counter-value">0</div>
+          <div id="raw-2" class="ring-raw">Leitura bruta do anel: —</div>
+        </div>
+        <div class="actions">
+          <button id="connect-2" class="btn-connect-2">Conectar Anel 2</button>
+          <button id="manual-2" class="btn-secondary">+1 Manual</button>
+          <button id="reset-2" class="btn-danger">Zerar Anel 2</button>
+        </div>
+      </div>
     </div>
 
-    <div id="logBox" class="log-box">
-      <div>Aguardando conexão Bluetooth...</div>
+    <!-- Histórico Unificado -->
+    <div class="history-card">
+      <div class="history-header">
+        <h3 style="margin: 0; font-size: 1rem;">Histórico de Entradas</h3>
+        <button id="btnClearHistory" class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">Limpar Histórico</button>
+      </div>
+      <div id="logBox" class="log-box">
+        <div style="text-align: center; padding: 12px 0;">Nenhum registro na sessão ainda.</div>
+      </div>
     </div>
   </div>
 
@@ -143,114 +233,170 @@
     const SERVICE_UUID = 0x1815; // Automation IO
     const CHAR_UUID = 0x2A56;    // Digital
 
-    let totalPessoas = 0;
-    let ultimoValorAnel = null;
-    let bluetoothDevice = null;
+    // Estado isolado para cada anel
+    const aneis = {
+      1: { device: null, sessao: 0, ultimoValorBruto: null },
+      2: { device: null, sessao: 0, ultimoValorBruto: null }
+    };
 
-    const displayCount = document.getElementById('displayCount');
-    const ringRaw = document.getElementById('ringRaw');
-    const statusEl = document.getElementById('status');
-    const logBox = document.getElementById('logBox');
+    const historico = [];
 
-    function addLog(msg) {
-      const hora = new Date().toLocaleTimeString('pt-BR');
+    function atualizarInterface() {
+      document.getElementById('count-1').textContent = aneis[1].sessao;
+      document.getElementById('count-2').textContent = aneis[2].sessao;
+      document.getElementById('totalGeral').textContent = aneis[1].sessao + aneis[2].sessao;
+    }
+
+    function registrarEvento(origem, mensagem, registrarNoCsv = true) {
+      const agora = new Date();
+      const hora = agora.toLocaleTimeString('pt-BR');
+      const data = agora.toLocaleDateString('pt-BR');
+
+      if (registrarNoCsv) {
+        historico.unshift({
+          data,
+          hora,
+          origem,
+          anel1: aneis[1].sessao,
+          anel2: aneis[2].sessao,
+          total: aneis[1].sessao + aneis[2].sessao
+        });
+      }
+
+      const logBox = document.getElementById('logBox');
+      if (historico.length === 1 && registrarNoCsv) {
+        logBox.innerHTML = '';
+      }
+
       const item = document.createElement('div');
-      item.textContent = `[${hora}] ${msg}`;
+      item.className = 'log-item';
+      item.innerHTML = `<span><strong>[${origem}]</strong> ${mensagem}</span><span>${hora}</span>`;
       logBox.prepend(item);
     }
 
-    function atualizarTela() {
-      displayCount.textContent = totalPessoas;
-    }
+    function processarLeitura(slot, novoValor) {
+      const estado = aneis[slot];
+      document.getElementById(`raw-${slot}`).textContent = `Leitura bruta do anel: ${novoValor}`;
 
-    function processarLeituraAnel(novoValor) {
-      ringRaw.textContent = `Visor do anel: ${novoValor}`;
-
-      // Primeira leitura após conectar: apenas sincroniza a referência
-      if (ultimoValorAnel === null) {
-        ultimoValorAnel = novoValor;
-        addLog(`Sincronizado com o anel (valor atual: ${novoValor})`);
+      // Primeira leitura ao conectar: sincroniza base sem somar o acumulado antigo
+      if (estado.ultimoValorBruto === null) {
+        estado.ultimoValorBruto = novoValor;
+        registrarEvento(`Anel ${slot}`, `Sincronizado (visor físico em ${novoValor})`, false);
         return;
       }
 
-      if (novoValor > ultimoValorAnel) {
-        const incremento = novoValor - ultimoValorAnel;
-        totalPessoas += incremento;
-        atualizarTela();
-        addLog(`+${incremento} pessoa(s) | Total: ${totalPessoas}`);
-      } else if (novoValor === 0 && ultimoValorAnel > 0) {
-        // O botão físico de reset do anel foi acionado
-        addLog('Anel zerado fisicamente (total da página mantido)');
+      if (novoValor > estado.ultimoValorBruto) {
+        const incremento = novoValor - estado.ultimoValorBruto;
+        estado.sessao += incremento;
+        atualizarInterface();
+        registrarEvento(`Anel ${slot}`, `+${incremento} (Subtotal: ${estado.sessao})`, true);
+      } else if (novoValor === 0 && estado.ultimoValorBruto > 0) {
+        registrarEvento(`Anel ${slot}`, 'Visor físico zerado (contagem do app mantida)', false);
       }
 
-      ultimoValorAnel = novoValor;
+      estado.ultimoValorBruto = novoValor;
     }
 
-    function handleCharacteristicChanged(event) {
-      const value = event.target.value;
-      const bytes = new Uint8Array(value.buffer);
+    function criarHandlerPacote(slot) {
+      return (event) => {
+        const bytes = new Uint8Array(event.target.value.buffer);
+        if (bytes.length < 15 || bytes[0] !== 0x06 || bytes[1] !== 0x0C) return;
 
-      // Valida cabeçalho (0x06, 0x0C) e tamanho mínimo do pacote
-      if (bytes.length < 15 || bytes[0] !== 0x06 || bytes[1] !== 0x0C) return;
+        let xor = 0;
+        for (let i = 0; i < 14; i++) xor ^= bytes[i];
+        if (xor !== bytes[14]) return;
 
-      // Valida checksum XOR dos bytes 0..13 contra o byte 14
-      let xor = 0;
-      for (let i = 0; i < 14; i++) {
-        xor ^= bytes[i];
-      }
-      if (xor !== bytes[14]) return;
-
-      const contadorAtual = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
-      processarLeituraAnel(contadorAtual);
+        const valorAtual = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
+        processarLeitura(slot, valorAtual);
+      };
     }
 
-    document.getElementById('btnConnect').addEventListener('click', async () => {
+    async function conectarAnel(slot) {
+      const statusEl = document.getElementById(`status-${slot}`);
+      const outroSlot = slot === 1 ? 2 : 1;
+
       try {
-        statusEl.textContent = 'Procurando BeiQi-S10...';
-        bluetoothDevice = await navigator.bluetooth.requestDevice({
+        statusEl.textContent = 'Buscando...';
+        const device = await navigator.bluetooth.requestDevice({
           filters: [{ namePrefix: 'BeiQi' }],
           optionalServices: [SERVICE_UUID]
         });
 
-        bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+        // Evita selecionar o mesmo anel físico nos dois slots
+        if (aneis[outroSlot].device && aneis[outroSlot].device.id === device.id) {
+          alert(`Este anel já está conectado no Anel ${outroSlot}. Selecione o outro dispositivo.`);
+          statusEl.textContent = aneis[slot].device ? 'Conectado' : 'Desconectado';
+          return;
+        }
+
+        aneis[slot].device = device;
+        aneis[slot].ultimoValorBruto = null;
+
+        device.addEventListener('gattserverdisconnected', () => {
           statusEl.textContent = 'Desconectado';
           statusEl.classList.remove('connected');
-          ultimoValorAnel = null;
-          addLog('Dispositivo desconectado.');
+          aneis[slot].ultimoValorBruto = null;
+          registrarEvento(`Anel ${slot}`, 'Desconectado', false);
         });
 
-        const server = await bluetoothDevice.gatt.connect();
+        const server = await device.gatt.connect();
         const service = await server.getPrimaryService(SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(CHAR_UUID);
+        const char = await service.getCharacteristic(CHAR_UUID);
 
-        await characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChanged);
+        await char.startNotifications();
+        char.addEventListener('characteristicvaluechanged', criarHandlerPacote(slot));
 
-        statusEl.textContent = `Conectado: ${bluetoothDevice.name}`;
+        statusEl.textContent = 'Conectado';
         statusEl.classList.add('connected');
-        addLog('Conectado e escutando cliques.');
+        registrarEvento(`Anel ${slot}`, `Conectado (${device.name})`, false);
       } catch (err) {
-        statusEl.textContent = 'Falha ou cancelado';
-        addLog(`Erro: ${err.message}`);
+        statusEl.textContent = aneis[slot].device?.gatt?.connected ? 'Conectado' : 'Cancelado';
       }
+    }
+
+    // Eventos dos botões de conexão, manual e reset para cada slot
+    [1, 2].forEach((slot) => {
+      document.getElementById(`connect-${slot}`).addEventListener('click', () => conectarAnel(slot));
+
+      document.getElementById(`manual-${slot}`).addEventListener('click', () => {
+        aneis[slot].sessao += 1;
+        atualizarInterface();
+        registrarEvento(`Anel ${slot}`, `+1 manual (Subtotal: ${aneis[slot].sessao})`, true);
+      });
+
+      document.getElementById(`reset-${slot}`).addEventListener('click', () => {
+        aneis[slot].sessao = 0;
+        atualizarInterface();
+        registrarEvento(`Anel ${slot}`, 'Contador da sessão zerado', false);
+      });
     });
 
-    // Botão para zerar a contagem da sessão na página
-    document.getElementById('btnReset').addEventListener('click', () => {
-      if (totalPessoas === 0) return;
-      if (confirm('Deseja zerar o contador da sessão atual?')) {
-        totalPessoas = 0;
-        atualizarTela();
-        logBox.innerHTML = '';
-        addLog('Contador zerado na página.');
-      }
+    // Limpar histórico visual e CSV
+    document.getElementById('btnClearHistory').addEventListener('click', () => {
+      historico.length = 0;
+      document.getElementById('logBox').innerHTML =
+        '<div style="text-align: center; padding: 12px 0;">Histórico limpo.</div>';
     });
 
-    // Botão auxiliar para ajuste manual (+1) caso necessário
-    document.getElementById('btnManual').addEventListener('click', () => {
-      totalPessoas += 1;
-      atualizarTela();
-      addLog(`+1 manual | Total: ${totalPessoas}`);
+    // Exportar CSV
+    document.getElementById('btnExportCsv').addEventListener('click', () => {
+      if (historico.length === 0) {
+        alert('Ainda não há registros de contagem para exportar.');
+        return;
+      }
+
+      const linhas = ['Data;Hora;Origem;Subtotal Anel 1;Subtotal Anel 2;Total Geral'];
+      [...historico].reverse().forEach((r) => {
+        linhas.push(`${r.data};${r.hora};${r.origem};${r.anel1};${r.anel2};${r.total}`);
+      });
+
+      const blob = new Blob(['\uFEFF' + linhas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contagem-pessoas-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   </script>
 </body>
